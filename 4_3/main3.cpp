@@ -34,6 +34,7 @@ void merge_join(int n_emp_runs, int n_dept_runs);
 bool next_emp(int n_emp_runs, ifstream empruns[], EmpBlock &emp);
 bool next_dept(int n_dept_runs, ifstream deptruns[], DeptBlock &dept);
 int to_real_idx(int start, int idx);
+void printJoin(EmpBlock emp, DeptBlock dept, ofstream &fout);
 
 int
 main()
@@ -287,10 +288,15 @@ merge_join(int n_emp_runs, int n_dept_runs)
 
   int mark = -1;
   ofstream join_out;
-  join_out.open("debug.csv", ios::out | ios::trunc);
+  join_out.open("join.csv", ios::out | ios::trunc);
+  bool finish = false;
+
   while(1)
   {
     int e_idx, d_idx, eid, manid;
+
+    if (finish)
+      break;
 
     if (mark == -1)
     {
@@ -304,31 +310,70 @@ merge_join(int n_emp_runs, int n_dept_runs)
         int end_idx = to_real_idx(e_start, e_size);
         int res = next_emp(n_emp_runs, empruns, empBuffer[end_idx]);
         if ( !res )
+        {
+          if (e_size == 0)
+          {
+            finish = true;
+            break;
+          }
           e_size--;
+        }
         e_start = (e_start + 1) % (MM_SIZE / 2);
         e_idx = to_real_idx(e_start, 0);
         eid = empBuffer[e_idx].eid;
       }
 
-      while (eid > manid)
-      {
-        int end_idx = to_real_idx(d_start, d_size);
-        int res = next_dept(n_dept_runs, deptruns, deptBuffer[end_idx]);
-        if ( !res )
-          d_size--;
-        d_start = (d_start + 1) % (MM_SIZE / 2);
-        d_idx = to_real_idx(d_start, 0);
-        manid = deptBuffer[d_idx].managerid;
-      }
+      if (finish)
+        break;
 
       mark = 0;
+      while (eid > manid)
+      {
+        d_idx = to_real_idx(d_start, mark);
+        manid = deptBuffer[d_idx].managerid;
+        mark++;
+      }
     }
 
     if (eid == manid)
     {
-      
-    }
+      int e_out_idx = to_real_idx(e_start, 0);
+      int d_out_idx = to_real_idx(d_start, mark);
+      printJoin(empBuffer[e_out_idx], deptBuffer[d_out_idx], join_out);
 
+      int end_idx = to_real_idx(d_start, d_size);
+      int res = next_dept(n_dept_runs, deptruns, deptBuffer[end_idx]);
+      if ( !res )
+      {
+        if (d_size == 0)
+        {
+          finish = true;
+          break;
+        }
+        d_size--;
+      }
+      d_start = (d_start + 1) % (MM_SIZE / 2);
+      d_idx = to_real_idx(d_start, 0);
+      manid = deptBuffer[d_idx].managerid;
+    }
+    else
+    {
+      int end_idx = to_real_idx(e_start, e_size);
+      int res = next_emp(n_emp_runs, empruns, empBuffer[end_idx]);
+      if ( !res )
+      {
+        if (e_size == 0)
+        {
+          finish = true;
+          break;
+        }
+        e_size--;
+      }
+      e_start = (e_start + 1) % (MM_SIZE / 2);
+      e_idx = to_real_idx(e_start, 0);
+      eid = empBuffer[e_idx].eid;
+      mark == -1;
+    }
 
   }
 
@@ -407,4 +452,11 @@ next_dept(int n_dept_runs, ifstream deptruns[], DeptBlock &dept)
     grabDept(deptruns[min_idx], dept);
     return true;
   }
+}
+
+void
+printJoin(EmpBlock emp, DeptBlock dept, ofstream &fout) {
+    fout << dept.did << ',' << dept.dname << ',' << dept.budget << ',' <<
+    dept.managerid<< ',' << emp.eid << ',' << emp.ename << ',' << emp.age
+    << ',' << emp.salary << ',' << "\n";
 }
