@@ -1,6 +1,6 @@
 To run the code:
 make
-main.out
+main3.out
 
 To clean all the generated files and executable files
 make clean
